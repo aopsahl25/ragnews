@@ -82,7 +82,7 @@ def extract_keywords(text, seed=None):
     '''
     system = '''extract key words from text and output them here'''
 
-    return run_llm(system, text, seed=0)
+    return run_llm(system, text, seed=seed)
 
     # FIXME:
     # Implement this function.
@@ -148,7 +148,7 @@ def rag(text, db):
     # You can start with a basic system prompt right away just to check if things are working,
     # but don't spend a lot of time on the system prompt until you're sure everything else is working.
     # Then, you can iteratively add more commands into the system prompt to correct "bad" behavior you see in your program's output.
-
+    return "hi there!"
 
 class ArticleDB:
     '''
@@ -375,9 +375,10 @@ if __name__ == '__main__':
         db.add_url(args.add_url, recursive_depth=args.recursive_depth, allow_dupes=True)
 
     else:
-        import readline
-        while True:
-            text = input('ragnews> ')
-            if len(text.strip()) > 0:
-                output = rag(text, db)
-                print(output)
+        # import readline
+        # while True:
+        #     text = input('ragnews> ')
+        #     if len(text.strip()) > 0:
+        #         output = rag(text, db)
+        #         print(output)
+        print(extract_keywords("this is a sentence to extract key words from", 0))
