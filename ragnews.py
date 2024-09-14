@@ -18,7 +18,6 @@ import sqlite3
 import groq
 import metahtml
 
-from dotenv import load_dotenv
 from groq import Groq
 import os
 
@@ -27,13 +26,16 @@ import os
 # LLM functions
 ################################################################################
 
-load_dotenv()
+#GROQ_API_KEY = 'gsk_D2uqgxCv5eCRoUrhhFowWGdyb3FYxbILatmduJSxPzWNVEEGs70Vl'
+
+
+#client = Groq(
+    #api_key=os.environ.get("GROQ_API_KEY"),
+#)
 
 client = Groq(
-    api_key=os.environ.get('GROQ_API_KEY'),
+    api_key='gsk_D2uqgxCv5eCRoUrhhFowWGdyb3FYxbILatmduJSxPzWNVEEGs70Vl'
 )
-
-
 
 def run_llm(system, user, model='llama3-8b-8192', seed=None):
     '''
@@ -80,7 +82,17 @@ def extract_keywords(text, seed=None):
     Note that the examples above are passing in a seed value for deterministic results.
     In production, you probably do not want to specify the seed.
     '''
-    system = '''extract key words from text and output them here'''
+    system = '''Objective: Teach the model to extract key words from a provided text.
+       
+        Instructions:
+        Read the Input Text: Carefully analyze the entire text provided.
+        Identify Key Concepts: Look for words or phrases that capture the main ideas, themes, or important details in the text.
+        Extract Key Words: Choose words or short phrases that are crucial for understanding the text’s core message or content. Key words typically include:
+        Nouns that denote significant subjects or objects.
+        Verbs that represent essential actions or processes.
+        Adjectives that describe critical attributes or qualities.
+        Proper Nouns including names of people, places, or organizations.
+        Output: Provide a list of extracted key words from the text.'''
 
     return run_llm(system, text, seed=seed)
 
@@ -375,10 +387,10 @@ if __name__ == '__main__':
         db.add_url(args.add_url, recursive_depth=args.recursive_depth, allow_dupes=True)
 
     else:
-        # import readline
-        # while True:
-        #     text = input('ragnews> ')
-        #     if len(text.strip()) > 0:
-        #         output = rag(text, db)
-        #         print(output)
-        print(extract_keywords("this is a sentence to extract key words from", 0))
+         import readline
+         while True:
+             text = input('ragnews> ')
+             if len(text.strip()) > 0:
+                 output = rag(text, db)
+                 print(output)
+        #print(extract_keywords("this is a sentence to extract key words from", 0))
