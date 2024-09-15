@@ -1,3 +1,6 @@
 [submodule "metahtml"]
 	path = metahtml
 	url = https://github.com/mikeizbicki/metahtml.git
+[submodule "ragnewsmeta"]
+	path = ragnewsmeta
+	url = https://github.com/mikeizbicki/metahtml.git
