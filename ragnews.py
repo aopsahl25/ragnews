@@ -16,7 +16,7 @@ import requests
 import sqlite3
 
 import groq
-import metahtml
+import ragnewsmeta
 
 from groq import Groq
 import os
@@ -47,7 +47,8 @@ def run_llm(system, user, model='llama3-8b-8192', seed=None):
             }
         ],
         model=model,
-        seed=seed,
+        seed=seed if seed is not None else None
+        #seed allows for deterministic results
     )
     return chat_completion.choices[0].message.content
 
@@ -76,6 +77,19 @@ def extract_keywords(text, seed=None):
     Note that the examples above are passing in a seed value for deterministic results.
     In production, you probably do not want to specify the seed.
     '''
+
+    system = '''
+    You are a highly capable assistant specializing in text analysis. 
+    Your task is to extract the most important and relevant keywords or key phrases from the following text. 
+    The keywords should capture the core topics and entities mentioned in the text.
+
+    Text:
+    {text}
+
+    Keywords:
+    '''
+  
+    return run_llm(system, text, seed=seed)
 
     # FIXME:
     # Implement this function.
@@ -119,6 +133,31 @@ def rag(text, db):
     This function uses retrieval augmented generation (RAG) to generate an LLM response to the input text.
     The db argument should be an instance of the `ArticleDB` class that contains the relevant documents to use.
     '''
+    #1. extract keywords from the text
+    keywords = extract_keywords(text)
+
+    #2. use key words to find articles related to the text
+    articles = db.find_articles(keywords)
+
+    articles_str = "\n".join([f"{article['title']} - {article['url']}" for article in articles])    
+    # 3. Construct a new user prompt that includes all of the articles and the original text.
+    user_prompt = f'''
+    Here is the original text for context:
+    {text}
+    Here are some relevant articles that might help in forming a response:
+    {articles_str}
+    Based on the original text and the provided articles, please generate a detailed and informative response.
+    '''
+
+    # Step 4: Define my own system prompt
+    system_prompt = '''
+    You are an advanced assistant specializing in analyzing news articles and providing insights.
+    Your task is to generate a detailed and informative response based on the context provided by the original text and the relevant articles.
+    '''
+
+    # Step 5: Pass the new prompts to the LLM and return the result
+    response = run_llm(system_prompt, user_prompt)
+    return response
 
     # FIXME:
     # Implement this function.
@@ -215,7 +254,52 @@ class ArticleDB:
         Lowering the value of the timebias_alpha parameter will result in the time becoming more influential.
         The final ranking is computed by the FTS5 rank * timebias_alpha / (days since article publication + timebias_alpha).
         '''
-        
+
+        # SQL query for full text search - query being search term we want to match against articles in the db
+        sql = '''
+        SELECT rowid, title, publish_date, hostname, url, en_summary, rank
+        FROM articles
+        WHERE articles MATCH ?
+        ORDER BY rank
+        LIMIT ?;
+        '''
+
+        # Query execution
+        _logsql(sql)
+        cursor = self.db.cursor()
+        cursor.execute(sql, [query, limit])
+        rows = cursor.fetchall()
+
+        # Processing query results to include a time bias in article ranking
+        articles = []
+        for row in rows:
+            # Calculate the age of the article in days
+            publish_date = datetime.datetime.fromisoformat(row['publish_date'])
+            age_days = (datetime.datetime.now() - publish_date).days
+
+            # Calculate time bias 
+            time_bias = timebias_alpha / (age_days + timebias_alpha)
+
+            # Calculate final ranking while considering time bias
+            final_rank = row['rank'] * time_bias
+
+            article = {
+                'rowid': row['rowid'],
+                'title': row['title'],
+                'publish_date': row['publish_date'],
+                'hostname': row['hostname'],
+                'url': row['url'],
+                'en_summary': row['en_summary'],
+                'final_rank': final_rank  
+            }
+            articles.append(article)
+
+        # Sorting article results by rank in descending order
+        articles.sort(key=lambda x: x['final_rank'], reverse=True)
+
+        #returning resutls
+        return articles
+
         # FIXME:
         # Implement this function.
         # You do not need to concern yourself with the timebias_alpha parameter.
@@ -279,8 +363,8 @@ class ArticleDB:
         hostname = parsed_uri.netloc
 
         logging.debug(f'extracting information')
-        parsed = metahtml.parse(response.text, url)
-        info = metahtml.simplify_meta(parsed)
+        parsed = ragnewsmeta.parse(response.text, url)
+        info = ragnewsmeta.simplify_meta(parsed)
 
         if info['type'] != 'article' or len(info['content']['text']) < 100:
             logging.debug(f'not an article... skipping')
@@ -356,6 +440,7 @@ if __name__ == '__main__':
         )
 
     db = ArticleDB(args.db)
+    #stores all of our articles
 
     if args.add_url:
         db.add_url(args.add_url, recursive_depth=args.recursive_depth, allow_dupes=True)
