@@ -79,8 +79,8 @@ def extract_keywords(text, seed=None):
     '''
 
     system = '''
-    You are a highly capable assistant specializing in text analysis. 
-    Your task is to extract the most important and relevant keywords or key phrases from the following text. 
+    You are an advanced assistant specializing in text analysis. 
+    Your task is to think step by step to extract the most important and relevant keywords or key phrases from the following text. 
     The keywords should capture the core topics and entities mentioned in the text.
 
     Text:
@@ -152,7 +152,7 @@ def rag(text, db):
     # Step 4: Define my own system prompt
     system_prompt = '''
     You are an advanced assistant specializing in analyzing news articles and providing insights.
-    Your task is to generate a detailed and informative response based on the context provided by the original text and the relevant articles.
+    Your task is to think step by step to generate a detailed and informative response based on the context provided by the original text and the relevant articles.
     '''
 
     # Step 5: Pass the new prompts to the LLM and return the result
@@ -182,7 +182,7 @@ class ArticleDB:
 
     The following example shows how to add urls to the database.
 
-    >>> db = ArticleDB()
+    >>> db = ArticleDB() 
     >>> len(db)
     0
     >>> db.add_url(ArticleDB._TESTURLS[0])
