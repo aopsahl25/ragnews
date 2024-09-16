@@ -16,7 +16,7 @@ import requests
 import sqlite3
 
 import groq
-import ragnewsmeta
+import ragnewsmetahtml
 
 from groq import Groq
 import os
@@ -363,8 +363,8 @@ class ArticleDB:
         hostname = parsed_uri.netloc
 
         logging.debug(f'extracting information')
-        parsed = ragnewsmeta.parse(response.text, url)
-        info = ragnewsmeta.simplify_meta(parsed)
+        parsed = ragnewsmetahtml.parse(response.text, url)
+        info = ragnewsmetahtml.simplify_meta(parsed)
 
         if info['type'] != 'article' or len(info['content']['text']) < 100:
             logging.debug(f'not an article... skipping')
