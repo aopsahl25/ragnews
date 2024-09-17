@@ -16,7 +16,7 @@ print(f"row={row}")
 
 cursor = db.cursor()
 sql = '''
-SELECT title FROM articles('trump harris debate)
+SELECT title FROM articles('trump')
 '''
 cursor.execute(sql)
 rows = cursor.fetchall()
