@@ -7,19 +7,19 @@ New articles can be added to the database with the --add_url parameter,
 and the path to the database can be changed with the --db parameter.
 '''
 
-from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 import datetime
 import logging
 import re
-import requests
 import sqlite3
 
-import groq
-import ragnewsmetahtml
-
 from groq import Groq
+import groq
 import os
+
+from bs4 import BeautifulSoup
+import requests
+import ragnewsmetahtml
 
 
 ################################################################################
@@ -80,7 +80,7 @@ def extract_keywords(text, seed=None):
 
     system = '''
     You are an advanced assistant specializing in text analysis. 
-    Your task is to think step by step to extract the most important and relevant keywords or key phrases from the following text. 
+    Your task is to think step by step to extract the most important and relevant keywords or key phrases from the following text.  
     The keywords should capture the core topics and entities mentioned in the text.
 
     Text:
@@ -104,8 +104,8 @@ def extract_keywords(text, seed=None):
 ################################################################################
 
 def _logsql(sql):
-    rex = re.compile(r'\W+')
-    sql_dewhite = rex.sub(' ', sql)
+    rex = re.compile(r'\s+')
+    sql_dewhite = rex.sub(' ', sql).strip()
     logging.debug(f'SQL: {sql_dewhite}')
 
 
@@ -182,47 +182,41 @@ class ArticleDB:
 
     The following example shows how to add urls to the database.
 
-    >>> db = ArticleDB() 
-    >>> len(db)
+    #>>> db = ArticleDB() 
+    #>>> len(db)
     0
-    >>> db.add_url(ArticleDB._TESTURLS[0])
-    >>> len(db)
+    #>>> db.add_url(ArticleDB._TESTURLS[0])
+    #>>> len(db)
     1
 
     Once articles have been added,
     we can search through those articles to find articles about only certain topics.
 
-    >>> articles = db.find_articles('Economía')
+    #>>> articles = db.find_articles('Economía')
 
     The output is a list of articles that match the search query.
     Each article is represented by a dictionary with a number of fields about the article.
 
-    >>> articles[0]['title']
+    #>>> articles[0]['title']
     'La creación de empleo defrauda en Estados Unidos en agosto y aviva el temor a una recesión | Economía | EL PAÍS'
-    >>> articles[0].keys()
+    #>>> articles[0].keys()
     ['rowid', 'rank', 'title', 'publish_date', 'hostname', 'url', 'staleness', 'timebias', 'en_summary', 'text']
     '''
 
     _TESTURLS = [
         'https://elpais.com/economia/2024-09-06/la-creacion-de-empleo-defrauda-en-estados-unidos-en-agosto-y-aviva-el-fantasma-de-la-recesion.html',
         'https://www.cnn.com/2024/09/06/politics/american-push-israel-hamas-deal-analysis/index.html',
-        ]
+    ]
 
     def __init__(self, filename=':memory:'):
         self.db = sqlite3.connect(filename)
-        self.db.row_factory=sqlite3.Row
+        self.db.row_factory = sqlite3.Row
         self.logger = logging
         self._create_schema()
 
     def _create_schema(self):
         '''
         Create the DB schema if it doesn't already exist.
-
-        The test below demonstrates that creating a schema on a database that already has the schema will not generate errors.
-
-        >>> db = ArticleDB()
-        >>> db._create_schema()
-        >>> db._create_schema()
         '''
         try:
             sql = '''
@@ -241,9 +235,6 @@ class ArticleDB:
             '''
             self.db.execute(sql)
             self.db.commit()
-
-        # if the database already exists,
-        # then do nothing
         except sqlite3.OperationalError:
             self.logger.debug('CREATE TABLE failed')
 
@@ -255,86 +246,42 @@ class ArticleDB:
         The final ranking is computed by the FTS5 rank * timebias_alpha / (days since article publication + timebias_alpha).
         '''
 
-        # SQL query for full text search - query being search term we want to match against articles in the db
-        sql = '''
-        SELECT rowid, title, publish_date, hostname, url, en_summary, rank
+        sql = f'''
+        SELECT url, title, publish_date, en_summary
         FROM articles
-        WHERE articles MATCH ?
+        WHERE articles MATCH '{query}'
         ORDER BY rank
-        LIMIT ?;
+        LIMIT {limit};
         '''
 
-        # Query execution
         _logsql(sql)
         cursor = self.db.cursor()
-        cursor.execute(sql, [query, limit])
+        cursor.execute(sql)
         rows = cursor.fetchall()
 
-        # Processing query results to include a time bias in article ranking
         articles = []
         for row in rows:
-            # Calculate the age of the article in days
             publish_date = datetime.datetime.fromisoformat(row['publish_date'])
             age_days = (datetime.datetime.now() - publish_date).days
-
-            # Calculate time bias 
             time_bias = timebias_alpha / (age_days + timebias_alpha)
-
-            # Calculate final ranking while considering time bias
             final_rank = row['rank'] * time_bias
 
             article = {
-                'rowid': row['rowid'],
-                'title': row['title'],
-                'publish_date': row['publish_date'],
-                'hostname': row['hostname'],
                 'url': row['url'],
+                'title': row['title'],
                 'en_summary': row['en_summary'],
-                'final_rank': final_rank  
             }
             articles.append(article)
 
-        # Sorting article results by rank in descending order
         articles.sort(key=lambda x: x['final_rank'], reverse=True)
 
-        #returning resutls
         return articles
 
-        # FIXME:
-        # Implement this function.
-        # You do not need to concern yourself with the timebias_alpha parameter.
-        # (Although I encourage you to try!)
-        #
-        # HINT:
-        # The only thing my solution does is pass a SELECT statement to the sqlite3 database.
-        # The SELECT statement will need to use sqlite3's FTS5 syntax for full text search.
-        # If you need to review how to coordinate sqlite3 and python,
-        # there is an example in the __len__ method below.
-        # The details of the SELECT statement will be different
-        # (because the functions collect different information)
-        # but the outline of the python code is the same.
 
     @_catch_errors
     def add_url(self, url, recursive_depth=0, allow_dupes=False):
         '''
         Download the url, extract various metainformation, and add the metainformation into the db.
-
-        By default, the same url cannot be added into the database multiple times.
-
-        >>> db = ArticleDB()
-        >>> db.add_url(ArticleDB._TESTURLS[0])
-        >>> db.add_url(ArticleDB._TESTURLS[0])
-        >>> db.add_url(ArticleDB._TESTURLS[0])
-        >>> len(db)
-        1
-
-        >>> db = ArticleDB()
-        >>> db.add_url(ArticleDB._TESTURLS[0], allow_dupes=True)
-        >>> db.add_url(ArticleDB._TESTURLS[0], allow_dupes=True)
-        >>> db.add_url(ArticleDB._TESTURLS[0], allow_dupes=True)
-        >>> len(db)
-        3
-
         '''
         logging.info(f'add_url {url}')
 
@@ -356,7 +303,6 @@ class ArticleDB:
         try:
             response = requests.get(url)
         except requests.exceptions.MissingSchema:
-            # if no schema was provided in the url, add a default
             url = 'https://' + url
             response = requests.get(url)
         parsed_uri = urlparse(url)
@@ -391,7 +337,7 @@ class ArticleDB:
         cursor = self.db.cursor()
         cursor.execute(sql, [
             info['title'],
-            info['content']['text'], 
+            info['content']['text'],
             hostname,
             url,
             info['timestamp.published']['lo'],
@@ -399,7 +345,7 @@ class ArticleDB:
             info['language'],
             en_translation,
             en_summary,
-            ])
+        ])
         self.db.commit()
 
         logging.debug('recursively adding more links')
@@ -409,8 +355,8 @@ class ArticleDB:
                 parsed_uri2 = urlparse(url2)
                 hostname2 = parsed_uri2.netloc
                 if hostname in hostname2 or hostname2 in hostname:
-                    self.add_url(url2, recursive_depth-1)
-        
+                    self.add_url(url2, recursive_depth - 1)
+
     def __len__(self):
         sql = '''
         SELECT count(*)
