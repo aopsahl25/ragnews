@@ -83,7 +83,7 @@ def extract_keywords(text, seed=None):
     Your task is to think step by step to extract the most important and relevant keywords or key phrases from the following text.  
     The keywords should capture the core topics and entities mentioned in the text.
     Produce responses in the format of 'keyword keyword keyword keyword'. 
-    Only output keywords, not a "here are key words" phrase
+    Output 10 keywords with no other words attached. For example, do not output a "here are keywords" phrase, just output the actual keywords.
     '''
   
     return run_llm(system, text, seed=seed)
