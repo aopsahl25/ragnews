@@ -80,10 +80,11 @@ def extract_keywords(text, seed=None):
 
     system = '''
     You are an advanced assistant specializing in text analysis. 
-    Your task is to think step by step to extract the most important and relevant keywords or key phrases from the following text.  
+    Your task is to think step by step to extract the most important and relevant keywords from the following text.  
     The keywords should capture the core topics and entities mentioned in the text.
-    Produce responses in the format of 'keyword keyword keyword keyword'. 
-    Output 10 keywords with no other words attached. For example, do not output a "here are keywords" phrase, just output the actual keywords.
+    Responses should come in the format of 'keyword keyword keyword keyword'. 
+    Output exactly 10 keywords. 
+    Output only keywords, nothing more. For example, do not output a "here are keywords" phrase, just output the actual keywords.
     '''
   
     return run_llm(system, text, seed=seed)
@@ -139,17 +140,17 @@ def rag(text, db):
     articles_str = "\n".join([f"{article['title']} - {article['url']}" for article in articles])    
     # 3. Construct a new user prompt that includes all of the articles and the original text.
     user_prompt = f'''
-    Here is the original text for context:
+    Here is the original text:
     {text}
-    Here are some relevant articles that might help in forming a response:
+    Here are relevant articles:
     {articles_str}
-    Based on the original text and the provided articles, please generate a detailed and informative response.
+    Based on the original text and the relevant articles, please generate a detailed, accurate, and informative response to the user query.
     '''
 
     # Step 4: Define my own system prompt
     system_prompt = '''
-    You are an advanced assistant specializing in analyzing news articles and providing insights.
-    Your task is to think step by step to generate a detailed and informative response based on the context provided by the original text and the relevant articles.
+    You are an advanced assistant specializing in analyzing news articles and providing insights on current events.
+    Your task is to think step by step to generate a detailed, accurate, and informative response to user queries based on the context provided by the articles.
     '''
 
     # Step 5: Pass the new prompts to the LLM and return the result

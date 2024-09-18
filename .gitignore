@@ -4,3 +4,6 @@
 __pycache__
 venv
 *.DS_Store
+
+# all of the above patterns are "unqualified paths"
+# a qualified path is one that starts with / or ./
