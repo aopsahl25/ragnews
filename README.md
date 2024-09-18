@@ -5,7 +5,7 @@ This code runs an interactive question and answer system for news articles using
 An exmaple of how this works is as follows:
 
 ```
-$ python2 ragnews.py
+$ python3 ragnews.py
 >ragnews Who is the democratic presidential nominee?
 The democratic presidential nominee is Kamala Harris.
 ```
