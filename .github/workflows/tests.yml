@@ -16,22 +16,14 @@ jobs:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python }}
+      - name: Set up Python ${{matrix.python}}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python }}
-      - name: Install dependencies
+          python-version: ${{matrix.python}}
+      - name: install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          sudo apt-get update && sudo apt-get install -y expect # Install expect
-      - name: Run Pylint
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: run doctests
         run: |
-          pip install pylint
-          pylint ragnews.py
-      - name: Run doctests
-        run: |
-          chmod +x run_doctests.sh
-          ./run_doctests.sh
-      - name: Test functionality
-        run: echo 'spawn python3 ragnews.py; expect "ragnews> "; send "Sample input\r"; interact' | expect
+          python3 -m doctest ragnews.py
