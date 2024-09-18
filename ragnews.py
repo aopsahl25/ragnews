@@ -82,11 +82,8 @@ def extract_keywords(text, seed=None):
     You are an advanced assistant specializing in text analysis. 
     Your task is to think step by step to extract the most important and relevant keywords or key phrases from the following text.  
     The keywords should capture the core topics and entities mentioned in the text.
-
-    Text:
-    {text}
-
-    Keywords:
+    Produce responses in the format of 'keyword keyword keyword keyword'. 
+    Only output keywords, not a "here are key words" phrase
     '''
   
     return run_llm(system, text, seed=seed)
@@ -157,6 +154,7 @@ def rag(text, db):
 
     # Step 5: Pass the new prompts to the LLM and return the result
     response = run_llm(system_prompt, user_prompt)
+    #response = " ".join(response.split("Keywords:**\n\n* ")[-1].split("\n* "))
     return response
 
     # FIXME:
@@ -249,14 +247,15 @@ class ArticleDB:
         sql = f'''
         SELECT url, title, publish_date, en_summary
         FROM articles
-        WHERE articles MATCH '{query}'
+        WHERE articles MATCH '{query.replace("'", "").replace("!", "").replace(",", "").replace(".", "").replace("?", "")}'
         ORDER BY rank
         LIMIT {limit};
         '''
+        #print(sql)
 
         _logsql(sql)
         cursor = self.db.cursor()
-        cursor.execute(sql)
+        cursor.execute(sql)#, (query, ))
         rows = cursor.fetchall()
 
         articles = []
