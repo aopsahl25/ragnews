@@ -19,7 +19,7 @@ import os
 
 from bs4 import BeautifulSoup
 import requests
-import ragnewsmetahtml
+#import ragnewsmetahtml
 
 
 ################################################################################
@@ -31,7 +31,7 @@ client = Groq(
 )
 
 
-def run_llm(system, user, model='llama3-8b-8192', seed=None):
+def run_llm(system, user, model='llama-3.1-70b-versatile', seed=None):
     '''
     This is a helper function for all the uses of LLMs in this file.
     '''
@@ -126,13 +126,16 @@ def _catch_errors(func):
 ################################################################################
 
 
-def rag(text, db):
+def rag(text, db, keywords_text=None):
     '''
     This function uses retrieval augmented generation (RAG) to generate an LLM response to the input text.
     The db argument should be an instance of the `ArticleDB` class that contains the relevant documents to use.
     '''
+    if keywords_text is None:
+        keywords_text = text
     #1. extract keywords from the text
-    keywords = extract_keywords(text)
+
+    keywords = extract_keywords(keywords_text)
 
     #2. use key words to find articles related to the text
     articles = db.find_articles(keywords)
@@ -150,7 +153,7 @@ def rag(text, db):
     # Step 4: Define my own system prompt
     system_prompt = '''
     You are an advanced assistant specializing in analyzing news articles and providing insights on current events.
-    Your task is to think step by step to generate a detailed, accurate, and informative response to user queries based on the context provided by the articles.
+    Your task is to generate a detailed, accurate, and informative response to user queries based on the context provided by the articles.
     '''
 
     # Step 5: Pass the new prompts to the LLM and return the result
@@ -256,7 +259,7 @@ class ArticleDB:
 
         _logsql(sql)
         cursor = self.db.cursor()
-        cursor.execute(sql)#, (query, ))
+        cursor.execute(sql)
         rows = cursor.fetchall()
 
         articles = []
