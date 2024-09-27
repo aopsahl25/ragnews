@@ -56,7 +56,7 @@ OUTPUT: '''
 
 #Evaluating rag function with hairy-trumpet data set
 def main(data_file):
-    labels = []  # Use a list to preserve order
+    labels = []  
     masked_texts = []
 
     # Extracting labels and masked texts from the hairy-trumpet dataset
@@ -64,8 +64,7 @@ def main(data_file):
         for line in fin:
             dp = json.loads(line)
             masks = dp['masks']
-            # Add all masks directly to the labels list
-            labels.extend(masks)  # Collecting all mask instances
+            labels.extend(masks) 
             masked_texts.append(dp['masked_text'])
 
     logger.info(f'Extracted labels: {labels}')
@@ -76,12 +75,11 @@ def main(data_file):
     predicted_labels = []
     for masked_text in masked_texts:
         prediction = evaluator.predict(masked_text)
-        if prediction:  # Only append if prediction is not None
+        if prediction: 
             predicted_labels.append(prediction)
         else:
             predicted_labels.append([])
 
-    # No need to reverse labels; they are already in the correct order
     labels_flat = labels
 
     print("predicted labels = ", predicted_labels)
