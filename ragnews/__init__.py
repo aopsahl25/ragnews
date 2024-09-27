@@ -36,6 +36,7 @@ def run_llm(system, user, model='llama-3.1-70b-versatile', seed=None):
     This is a helper function for all the uses of LLMs in this file.
     '''
     chat_completion = client.chat.completions.create(
+        temperature = .5,
         messages=[
             {
                 'role': 'system',
@@ -80,11 +81,12 @@ def extract_keywords(text, seed=None):
 
     system = '''
     You are an advanced assistant specializing in text analysis. 
-    Your task is to think step by step to extract the most important and relevant keywords from the following text.  
+    Your task is to extract the most important and relevant keywords from the following text.  
     The keywords should capture the core topics and entities mentioned in the text.
     Responses should come in the format of 'keyword keyword keyword keyword'. 
     Output exactly 10 keywords. 
-    Output only keywords, nothing more. For example, do not output a "here are keywords" phrase, just output the actual keywords.
+    Output only keywords, nothing more. 
+    Do not prefice the keywords with "here are the keywords," and do not explain how the keywords were found or what their sources are.
     '''
   
     return run_llm(system, text, seed=seed)
@@ -132,7 +134,7 @@ def rag(text, db, keywords_text=None):
     The db argument should be an instance of the `ArticleDB` class that contains the relevant documents to use.
     '''
     if keywords_text is None:
-        keywords_text = text
+          keywords_text = text
     #1. extract keywords from the text
 
     keywords = extract_keywords(keywords_text)
@@ -142,7 +144,7 @@ def rag(text, db, keywords_text=None):
 
     articles_str = "\n".join([f"{article['title']} - {article['url']}" for article in articles])    
     # 3. Construct a new user prompt that includes all of the articles and the original text.
-    user_prompt = f'''
+    user = f'''
     Here is the original text:
     {text}
     Here are relevant articles:
@@ -151,13 +153,18 @@ def rag(text, db, keywords_text=None):
     '''
 
     # Step 4: Define my own system prompt
-    system_prompt = '''
+    system = '''
     You are an advanced assistant specializing in analyzing news articles and providing insights on current events.
-    Your task is to generate a detailed, accurate, and informative response to user queries based on the context provided by the articles.
+    Your task is to generate an accurate response to user queries based on the context provided by the articles.
+    Your response should include no extraneous words and should not explain your thinking. 
+    You will get a prize if you output exactly what is being asked for, and you will lose points if you output anything other than what is being asked for. 
     '''
 
+    #logging.info('rag.SYSTEM: ' + system)
+    #logging.info('rag.USER: ' + user)
+
     # Step 5: Pass the new prompts to the LLM and return the result
-    response = run_llm(system_prompt, user_prompt)
+    response = run_llm(system, user)
     #response = " ".join(response.split("Keywords:**\n\n* ")[-1].split("\n* "))
     return response
 
@@ -247,19 +254,19 @@ class ArticleDB:
         Lowering the value of the timebias_alpha parameter will result in the time becoming more influential.
         The final ranking is computed by the FTS5 rank * timebias_alpha / (days since article publication + timebias_alpha).
         '''
-
-        sql = f'''
-        SELECT url, title, publish_date, en_summary
+        formatted_query = f'"{query}"'
+        sql = '''
+        SELECT url, title, en_summary
         FROM articles
-        WHERE articles MATCH '{query.replace("'", "").replace("!", "").replace(",", "").replace(".", "").replace("?", "")}'
+        WHERE articles MATCH ?
         ORDER BY rank
-        LIMIT {limit};
+        LIMIT ?;
         '''
         #print(sql)
 
         _logsql(sql)
         cursor = self.db.cursor()
-        cursor.execute(sql)
+        cursor.execute(sql, (formatted_query, limit))
         rows = cursor.fetchall()
 
         articles = []
@@ -312,8 +319,8 @@ class ArticleDB:
         hostname = parsed_uri.netloc
 
         logging.debug(f'extracting information')
-        parsed = ragnewsmetahtml.parse(response.text, url)
-        info = ragnewsmetahtml.simplify_meta(parsed)
+        #parsed = ragnewsmetahtml.parse(response.text, url)
+        #info = ragnewsmetahtml.simplify_meta(parsed)
 
         if info['type'] != 'article' or len(info['content']['text']) < 100:
             logging.debug(f'not an article... skipping')
